@@ -133,7 +133,7 @@ class WaybackMachineClient:
         return SnapshotResults(snapshots=snapshots, digests=unique_digests)
 
     @sleep_and_retry
-    @limits(calls=2, period=1)
+    @limits(calls=CDXEndpoint.RATE_LIMIT_CALLS, period=CDXEndpoint.RATE_LIMIT_PERIOD)
     def _count_site_changes(
         self,
         url: str,
@@ -172,7 +172,7 @@ class WaybackMachineClient:
             return 0
 
     @sleep_and_retry
-    @limits(calls=2, period=1)
+    @limits(calls=CDXEndpoint.RATE_LIMIT_CALLS, period=CDXEndpoint.RATE_LIMIT_PERIOD)
     def _get_snapshot_content(self, snapshot_url: str) -> Optional[str]:
         """
         Retrieves the content of a snapshot from a given snapshot URL.
@@ -427,8 +427,6 @@ class WaybackMachineClient:
             "collapse": collapse_filter,
             "fl": ",".join(CDXEndpoint.FIELDS),
         }
-
-        # Add filters
         for f in CDXEndpoint.FILTERS:
             params[f"filter"] = f
 

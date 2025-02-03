@@ -487,27 +487,3 @@ def consolidate_tos_links(
 
     consolidated_df.to_csv(output_file, index=False)
     print(f"Consolidation complete. The consolidated file is saved as '{output_file}'.")
-
-
-def normalize_text(text: Optional[str]) -> str:
-    """
-    Normalizes text by handling special characters and whitespace consistently.
-
-    Args:
-        text: Input text to normalize
-
-    Returns:
-        Normalized text string
-    """
-    if not text:
-        return ""
-
-    # Normalize unicode characters
-    text = unicodedata.normalize("NFKC", text)
-
-    # Replace problematic characters
-    text = text.replace("\x00", "")  # Remove null bytes
-
-    # Normalize whitespace
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
-    return "\n".join(lines)

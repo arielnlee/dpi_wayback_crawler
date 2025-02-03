@@ -34,7 +34,7 @@ python -m wayback.run \
 - `--start-date` (str, default: `"20240419"`): Start date in YYYYMMDD format.
 - `--end-date` (str, default: `"20250203"`): End date in YYYYMMDD format.
 - `--frequency` (str, default: `"monthly"`, choices: `["daily", "monthly", "annually"]`): Frequency of collecting snapshots.
-- `--num-workers` (int, default: `6`): Number of worker threads.
+- `--num-workers` (int, default: `multiprocessing.cpu_count() - 1`): Number of worker threads.
 - `--snapshots-path` (Path, default: `Path("snapshots")`): Path to the folder where snapshots will be saved.
 - `--stats-path` (Path, default: `Path("stats")`): Path to the folder where rate of change stats will be saved.
 - `--count-changes` (flag, default: `False`): Track rate of change by counting the number of unique changes for each site in the date range.
@@ -47,10 +47,48 @@ The only required argument is the input path to a CSV file with URLs.
 
 **Rate Limiting**
 
-To avoid overwhelming sites and respect rate limits, this script uses the `ratelimit` library to limit the number of requests to 3 requests per second.
+To avoid overwhelming sites and respect rate limits, this script uses the `ratelimit` library to limit the number of requests to 2 requests per second.
 
-If you need to adjust the rate limit, modify the `@limits` decorator in the `_get_pages`, `_get_snapshot_content`, and `_count_site_changes` methods.
+If you need to adjust the rate limit, modify the `RATE_LIMIT_CALLS` and `RATE_LIMIT_PERIOD` of the `CDXEndpoint` class in the `config.py` file.
 
 **Errors**
 
 Any errors / failed requests are saved to a file called `failed_urls.txt` in the root directory of this repo.
+
+**Output JSON Format**
+
+When using `--process-to-json`, the script creates a JSON file with the following structure:
+
+```json
+{
+    "domain.com": {
+        "YYYY-MM-DD": "content for this date",
+        "YYYY-MM-DD": "content for this date",
+        ...
+    },
+    "another-domain.com": {
+        "YYYY-MM-DD": "content for this date",
+        "YYYY-MM-DD": "content for this date",
+        ...
+    }
+}
+```
+
+Example output for robots.txt files:
+
+```json
+{
+  "patents.google.com": {
+    "2024-04-19": "User-agent: *\nDisallow: /*\nAllow: /$\nAllow: /advanced$\nAllow: /patent/\nAllow: /sitemap/",
+    "2024-05-01": "User-agent: *\nDisallow: /*\nAllow: /$\nAllow: /advanced$\nAllow: /patent/\nAllow: /sitemap/",
+    "2024-06-01": "User-agent: *\nDisallow: /*\nAllow: /$\nAllow: /advanced$\nAllow: /patent/\nAllow: /sitemap/"
+  }
+}
+```
+
+The JSON structure is:
+
+- Top level: Dictionary of domains
+- Second level: Dictionary of dates mapping to content
+- Content: Raw text/HTML content for that snapshot
+- Dates: In YYYY-MM-DD format

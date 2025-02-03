@@ -164,7 +164,7 @@ cython_debug/
 
 # Ignore csv and txt files
 *.csv
-*.txt
+failed_urls.txt
 
 # Ignore snapshots folder
 snapshots/
