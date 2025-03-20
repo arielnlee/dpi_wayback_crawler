@@ -6,7 +6,7 @@ from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Set
 
 import requests
 from dateutil.relativedelta import relativedelta
@@ -30,8 +30,8 @@ class Snapshot:
 class SnapshotResults:
     """Collection of snapshots and their metadata"""
 
-    snapshots: list[Snapshot]
-    digests: dict[str, set[str]]  # interval -> set of digests
+    snapshots: List[Snapshot]
+    digests: Dict[str, Set[str]]  # interval -> set of digests
 
 
 class WaybackMachineClient:
@@ -221,11 +221,54 @@ class WaybackMachineClient:
         sanitized_url = sanitize_url(url)
         url_folder = os.path.join(self.snapshots_path, sanitized_url)
 
-        snapshots_exist = os.path.exists(url_folder) and len(os.listdir(url_folder)) > 0
+        def _get_uncovered_range(
+            required_start, required_end, current_start, current_end, months_buffer=2):
+            """Find uncovered date range that needs computation, allowing 1 month buffer."""
+            
+            # Convert all to datetime
+            r_start = datetime.strptime(required_start, '%Y%m%d')
+            r_end = datetime.strptime(required_end, '%Y%m%d')
+            c_start = datetime.strptime(current_start, '%Y%m%d')
+            c_end = datetime.strptime(current_end, '%Y%m%d')
+            
+            buffer = relativedelta(months=months_buffer)
+            
+            # If current range completely covers required range with buffer
+            if c_start <= r_start + buffer and c_end >= r_end - buffer:
+                return None, None
+            
+            # Calculate gaps with buffer
+            has_start_gap = c_start > r_start + buffer
+            has_end_gap = c_end < r_end - buffer
+            
+            # If both gaps exist, run full required range.
+            if has_start_gap and has_end_gap:
+                return required_start, required_end
+            
+            # If only start gap exists
+            elif has_start_gap:
+                return required_start, (c_start - relativedelta(days=1)).strftime('%Y%m%d')
+            
+            # If only end gap exists
+            elif has_end_gap:
+                return (c_end + relativedelta(days=1)).strftime('%Y%m%d'), required_end
+            
+            # If we get here, there's no significant uncovered range
+            return None, None
+
+        snapshot_exists = os.path.exists(url_folder) and len(os.listdir(url_folder)) > 0:
+        new_start, new_end = None, None
+        if snapshot_exists:
+            new_start, new_end = _get_uncovered_range(
+                start_date, end_date,
+                datetime.strptime(min([date_str[:8] for datestr in os.listdir(url_folder)]), '%Y%m%d'),
+                datetime.strptime(max([date_str[:8] for datestr in os.listdir(url_folder)]), '%Y%m%d'),
+                months_buffer=2,
+            )
 
         results = []
-        if not snapshots_exist:
-            results = self._get_pages(url, start_date, end_date, frequency)
+        if not snapshots_exist or new_start is not None:
+            results = self._get_pages(url, new_start, new_end, frequency)
             if results.snapshots:
                 for snapshot in results.snapshots:
                     self._save_snapshot(url, snapshot.date, snapshot.content)
@@ -278,7 +321,7 @@ class WaybackMachineClient:
 
     def process_urls(
         self,
-        urls: list[str],
+        urls: List[str],
         start_date: str,
         end_date: str,
         frequency: str,
