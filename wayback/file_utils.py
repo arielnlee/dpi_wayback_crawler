@@ -11,7 +11,7 @@ from datetime import datetime
 from functools import partial
 from itertools import combinations
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List, Dict
 from urllib.parse import urlparse
 
 import chardet
@@ -23,7 +23,7 @@ from tqdm import tqdm
 
 def extract_urls(
     csv_file_path: Path, site_type: str, logger: logging.Logger
-) -> list[str]:
+) -> List[str]:
     """
     Extracts URLs from a single CSV file.
     """
@@ -88,13 +88,13 @@ def sanitize_url(url: str) -> str:
 
 def process_directory(
     directory: Path, url: str, site_type: str, num_workers: int
-) -> dict[str, dict[str, str]]:
+) -> Dict[str, Dict[str, str]]:
     """
     Processes a single directory of HTML files and returns a dictionary of formatted text.
     """
     data = {}
 
-    def process_file(file_path: Path) -> Optional[dict[str, str]]:
+    def process_file(file_path: Path) -> Optional[Dict[str, str]]:
         if file_path.suffix == ".html":
             formatted_text = extract_and_format_text(file_path)
             if formatted_text:
@@ -130,7 +130,7 @@ def parse_html_directories(
     num_processes: int = None,
     max_chunk_size: Optional[int] = 5000,
     output_json_path: Path = Path("temporal_data.json"),
-) -> list[Path]:
+) -> List[Path]:
     """
     Processes directories of HTML files and writes the formatted text to JSON files.
     Returns a list of output file paths.
@@ -207,7 +207,7 @@ def parse_html_directories(
 
 def process_row(
     row: dict, root_directory: Path, site_type: str, num_workers: int
-) -> dict[str, dict[str, dict[str, str]]]:
+) -> Dict[str, Dict[str, Dict[str, str]]]:
     data = {}
     if site_type == "robots" or site_type == "main":
         url = row["URL"]
@@ -341,7 +341,7 @@ def extract_and_format_text(file_path: Path) -> str:
         return ""
 
 
-def get_website_start_dates(snapshot_dir: str) -> dict[str, pd.Timestamp]:
+def get_website_start_dates(snapshot_dir: str) -> Dict[str, pd.Timestamp]:
     start_dates = {}
     for sanitized_url in os.listdir(snapshot_dir):
         url_dir = os.path.join(snapshot_dir, sanitized_url)
@@ -355,7 +355,7 @@ def get_website_start_dates(snapshot_dir: str) -> dict[str, pd.Timestamp]:
     return start_dates
 
 
-def find_farthest_dates(dates: list[str]) -> list[str]:
+def find_farthest_dates(dates: List[str]) -> List[str]:
     """
     Find the two dates that are as far apart as possible.
     """

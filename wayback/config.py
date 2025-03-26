@@ -29,7 +29,7 @@ class CDXEndpoint:
     """
 
     # Required fields for CDX API response
-    FIELDS: list[str] = [
+    FIELDS = [
         "timestamp",  # When the snapshot was taken
         "original",  # Original URL
         "mimetype",  # Content type
@@ -37,7 +37,7 @@ class CDXEndpoint:
         "digest",  # Content hash
     ]
     # Standard exclusion filters
-    FILTERS: list[str] = [
+    FILTERS = [
         "!statuscode:404",  # Exclude not found pages
         "!mimetype:warc/revisit",  # Exclude duplicate content
     ]
